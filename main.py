@@ -23,7 +23,7 @@ def main():
     gpt_client = GPTClient()
     bs_client = BSClient()
 
-    full_url="https://www.nikkei.com/markets/worldidx/"
+    full_url = "https://www.nikkei.com/markets/worldidx/"
     body_text = nikkei_utils.fetch_nikkei_index(full_url)
     print(body_text)
 
@@ -31,14 +31,24 @@ def main():
     jst = pytz.timezone('Asia/Tokyo')
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
-    message = gpt_utils.get_description(gpt_client, f"今は{created_at}である。これから与えるデータから分かることを本日のデータを対象に250文字以下で3行にまとめて欲しい。\n回答は日本語で強調文字は使用せず簡素にする。\n以下にデータを記載する。\n\n{body_text}")
+    message = gpt_utils.get_description(
+        gpt_client, 
+        f"今は{created_at}である。これから与えるデータから分かることを"
+        "更新時間が新しいものを対象に250文字以下で3行にまとめて欲しい。\n"
+        "回答は日本語で強調文字は使用せず簡素にする。\n"
+        f"以下にデータを記載する。\n\n{body_text}"
+    )
     print(message)
 
-    post_text = bluesky_utils.format_message(f"{created_at}時点", "今日の市場動向", message)
+    post_text = bluesky_utils.format_message(
+        f"{created_at}時点", "今日の市場動向", message
+    )
     print(post_text.build_text(), image_url, sep="\n")
 
     bluesky_utils.authenticate(bs_client, user_handle, user_password)
-    embed_external = bluesky_utils.create_external_embed(bs_client, title, description, full_url, image_url)
+    embed_external = bluesky_utils.create_external_embed(
+        bs_client, title, description, full_url, image_url
+    )
     bluesky_utils.post(bs_client, post_text, embed_external)
 
 if __name__ == "__main__":
