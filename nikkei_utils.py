@@ -19,11 +19,12 @@ def fetch_nikkei_index(url):
         for row in rows:
             header = row.find("th")
             columns = row.find_all("td")
-            if header and len(columns) >= 2:
+            if header and len(columns) >= 3:
                 index_name = header.text.strip()
                 value = columns[0].text.strip()
                 change = columns[1].text.strip()
-                index_data.append(f"{index_name}: {value} ({change})")
+                update_time = columns[2].text.strip()
+                index_data.append(f"{index_name}: {value} ({change}), 更新時間: {update_time}")
 
         all_index_data.append("\n".join(index_data))
 

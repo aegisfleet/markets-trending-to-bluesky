@@ -14,7 +14,7 @@ def get_description(gpt_client, text, max_retries=3):
             response = gpt_client.chat.completions.create(
                 model="gpt-4-turbo",
                 provider=g4f.Provider.Bing,
-                messages=[{"role": "user", "content": f"これから与えるデータから分かることを250文字以下で3行にまとめて欲しい。\n回答は日本語で強調文字は使用せず簡素にする。\n以下にデータを記載する。\n\n{text}"}],
+                messages=[{"role": "user", "content": f"{text}"}],
             )
             content = response.choices[0].message.content
             if len(content) > 250:

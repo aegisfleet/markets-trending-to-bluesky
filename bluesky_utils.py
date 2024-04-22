@@ -30,6 +30,10 @@ def parse_html_for_metadata(html_content):
 def authenticate(bs_client, username, password):
     bs_client.login(username, password)
 
+def format_message(title, introduction, content):
+    formatted_content = content.replace("\n", "").replace("。", "。\n")
+    return client_utils.TextBuilder().text(f"{introduction}\n\n{title}\n{formatted_content}")
+
 def format_message_with_link(title, url, introduction, content):
     formatted_content = content.replace("\n", "").replace("。", "。\n")
     return client_utils.TextBuilder().text(f"{introduction}\n\n").link(title, url).text(f"\n{formatted_content}")
