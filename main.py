@@ -28,21 +28,40 @@ def main():
     print(body_text)
 
     title, description, image_url = bluesky_utils.fetch_webpage_metadata(full_url)
+
     jst = pytz.timezone('Asia/Tokyo')
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
-    message = gpt_utils.get_description(
-        gpt_client, 
-        f"今は{created_at}である。これから与えるデータから分かることを"
-        "更新時間が新しいものを対象に250文字以下で3行にまとめて欲しい。\n"
-        "回答は日本語で強調文字は使用せず簡素にする。\n"
-        f"以下にデータを記載する。\n\n{body_text}"
-    )
-    print(message)
 
-    post_text = bluesky_utils.format_message(
-        f"{created_at}時点", "今日の市場動向", message
-    )
+    introduction = "今日の市場動向"
+    limit_size = 300 - len(introduction) - len(created_at) - 5
+    print (f"limit_size: {limit_size}")
+
+    retries = 0
+    max_retries = 3
+    while retries < max_retries:
+        message = gpt_utils.get_description(
+            gpt_client, 
+            f"今は{created_at}である。これから与えるデータから分かることを"
+            f"更新時間が新しいものを対象に{limit_size}文字以下で3行にまとめて欲しい。\n"
+            "回答は日本語で強調文字は使用せず簡素にする。\n"
+            f"以下にデータを記載する。\n\n{body_text}",
+            limit_size
+        )
+        post_text = bluesky_utils.format_message(
+            f"{created_at}時点", introduction, message
+        )
+
+        if len(post_text.build_text()) < 300:
+            break
+
+        retries += 1
+        print(f"文字数が300文字を超えています。リトライ回数: {retries}")
+
+    if retries == max_retries and len(post_text.build_text()) >= 300:
+        print("300文字以内の文字を生成できませんでした。")
+        sys.exit(1)
+
     print(post_text.build_text(), image_url, sep="\n")
 
     bluesky_utils.authenticate(bs_client, user_handle, user_password)
