@@ -1,12 +1,9 @@
-name: スクリプトを実行する
+name: スクリプトを実行する(株探)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 22 * * 1-5'
-    - cron: '0 3 * * 1-5'
-    - cron: '0 6 * * 1-5'
-    - cron: '0 11 * * 1-5'
+    - cron: '0 9 * * *'
 
 jobs:
   run_script:
@@ -30,4 +27,4 @@ jobs:
         env:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
-        run: python main.py $BLUESKY_HANDLE $BLUESKY_PASSWORD
+        run: python main.py $BLUESKY_HANDLE $BLUESKY_PASSWORD kabutan
