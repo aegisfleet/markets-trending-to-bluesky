@@ -27,13 +27,14 @@ def generate_post_text(gpt_client, full_url, introduction):
     retries = 0
     max_retries = 3
     while retries < max_retries:
-        limit_size = 300 - len(introduction) - len(created_at) - 5
+        limit_size = 300 - len(introduction) - len(created_at) - 10
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
             gpt_client,
-            f"今は{created_at}である。これから与えるデータから分かることを"
+            f"今は{created_at}である。\nこれから与えるデータから分かることを"
             f"更新時間が新しいものを対象に{limit_size}文字以下で3行にまとめて欲しい。\n"
-            "回答は日本語で強調文字は使用せず簡素にする。\n"
+            "回答は強調文字は使用せず、更新時間の情報は不要である。\n"
+            "具体的な数字を使用して日経平均/ドル・円を中心に更新された値について紹介する。\n"
             f"以下にデータを記載する。\n\n{content}",
             limit_size
         )
