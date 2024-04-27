@@ -69,8 +69,6 @@ def generate_post_text(gpt_client, full_url, introduction):
     return None
 
 def post(user_handle, user_password):
-    gpt_utils.setup_cookies()
-
     gpt_client = GPTClient()
     bs_client = BSClient()
 

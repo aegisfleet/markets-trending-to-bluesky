@@ -79,8 +79,6 @@ def generate_post_text(gpt_client, full_url, title, content, introduction):
     return None
 
 def post(user_handle, user_password, config):
-    gpt_utils.setup_cookies()
-
     targets = get_articles(config)
 
     gpt_client = GPTClient()
