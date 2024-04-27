@@ -3,27 +3,42 @@ import requests
 from atproto import Client as BSClient
 from g4f.client import Client as GPTClient
 from bs4 import BeautifulSoup
+import artifact_utils
 import bluesky_utils
 import gpt_utils
 
-def get_article_urls_and_titles(url="https://kabutan.jp/info/accessranking/2_1", count=5):
-    response = requests.get(url)
-    if response.status_code != 200:
-        print(f"Error: Failed to retrieve content from {url}")
-        return []
+def get_articles(config):
+    url = config.get("url", "")
+    count = config.get("count", 5)
+    base_url = config.get("base_url", "")
+    container_tag = config.get("container_tag", {"name": "div", "class_": ""})
+    title_box_tag = config.get("title_box_tag", {"name": "div", "class_": ""})
+    href_prefix = config.get("href_prefix", "")
 
+    previous_articles = artifact_utils.load_previous_results()
+    response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-    article_elements = soup.find_all("td", class_="acrank_title")
+    article_elements = soup.find_all(container_tag["name"], class_=container_tag["class_"])
 
     articles = []
-    for article_element in article_elements[:count]:
-        a_tag = article_element.find("a")
+    for article_element in article_elements[:10]:
+        if len(articles) >= count:
+            break
+
+        title_box = article_element.find(title_box_tag["name"], class_=title_box_tag["class_"]) if title_box_tag["class_"] else None
+
+        if title_box is None:
+            title_box = article_element
+
+        a_tag = title_box.find("a")
         if a_tag and "href" in a_tag.attrs:
             href = a_tag["href"]
-            full_url = f"https://kabutan.jp{href}"
-            title = a_tag.text
-            articles.append((full_url, title))
+            full_url = f"{base_url}{href_prefix}{href}"
+            if full_url not in previous_articles:
+                title = a_tag.get_text().strip()
+                articles.append((full_url, title))
 
+    artifact_utils.save_results(articles)
     return articles
 
 def remove_newlines(text):
@@ -63,10 +78,10 @@ def generate_post_text(gpt_client, full_url, title, content, introduction):
     print("300文字以内の文字を生成できませんでした。")
     return None
 
-def post(user_handle, user_password):
+def post(user_handle, user_password, config):
     gpt_utils.setup_cookies()
 
-    targets = get_article_urls_and_titles()
+    targets = get_articles(config)
 
     gpt_client = GPTClient()
     bs_client = BSClient()
@@ -75,7 +90,7 @@ def post(user_handle, user_password):
         print(f"\nURL: {full_url}\nTitle: {title}")
 
         content = fetch_article_content(full_url)
-        post_text = generate_post_text(gpt_client, full_url, title, content, "今日の経済ニュース")
+        post_text = generate_post_text(gpt_client, full_url, title, content, config.get("introduction", ""))
         if not post_text:
             continue
 
