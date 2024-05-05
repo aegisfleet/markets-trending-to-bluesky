@@ -41,6 +41,7 @@ def generate_post_text(gpt_client, full_url, introduction):
     jst = pytz.timezone('Asia/Tokyo')
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
+    created_day = now.strftime('%d')
 
     content = fetch_nikkei_index(full_url)
     retries = 0
@@ -50,10 +51,10 @@ def generate_post_text(gpt_client, full_url, introduction):
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
             gpt_client,
-            f"今は{created_at}である。\nこれから与えるデータから分かることを"
-            f"更新時間が新しいものを対象に{limit_size}文字以下で3行にまとめて欲しい。\n"
+            f"これから与えるデータから分かることを具体的な価格やポイントを使用してまとめて欲しい。\n"
             "回答は強調文字は使用せず、更新時間の情報は不要である。\n"
-            "具体的な数字を使用して日経平均/ドル・円を中心に更新された値について紹介する。\n"
+            f"なるべく{created_day}日に更新された値を紹介し、{created_day}日に更新されていない項目は省略する。\n"
+            f"必ず{limit_size}文字以下にする。\n"
             f"以下にデータを記載する。\n\n{content}",
             limit_size
         )
