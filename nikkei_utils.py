@@ -3,7 +3,6 @@ import pytz
 import requests
 import sys
 from atproto import Client as BSClient
-from g4f.client import Client as GPTClient
 from bs4 import BeautifulSoup
 import bluesky_utils
 import gpt_utils
@@ -37,7 +36,7 @@ def fetch_nikkei_index(url):
 
     return "\n\n".join(all_index_data)
 
-def generate_post_text(gpt_client, full_url, introduction):
+def generate_post_text(api_key, full_url, introduction):
     jst = pytz.timezone('Asia/Tokyo')
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
@@ -50,7 +49,7 @@ def generate_post_text(gpt_client, full_url, introduction):
         limit_size = 300 - len(introduction) - len(created_at) - 10
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
-            gpt_client,
+            api_key,
             f"これから与えるデータから分かることを具体的な価格やポイントを使用してまとめて欲しい。\n"
             "回答は強調文字は使用せず、更新時間の情報は不要である。\n"
             f"なるべく{created_day}日に更新された値を紹介し、{created_day}日に更新されていない項目は省略する。\n"
@@ -69,14 +68,13 @@ def generate_post_text(gpt_client, full_url, introduction):
     print("300文字以内の文字を生成できませんでした。")
     return None
 
-def post(user_handle, user_password):
-    gpt_client = GPTClient()
+def post(user_handle, user_password, api_key):
     bs_client = BSClient()
 
     full_url = "https://www.nikkei.com/markets/worldidx/"
     print(f"\nURL: {full_url}")
 
-    post_text = generate_post_text(gpt_client, full_url, "今日の市場動向")
+    post_text = generate_post_text(api_key, full_url, "今日の市場動向")
     if not post_text:
         sys.exit(1)
 

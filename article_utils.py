@@ -1,7 +1,6 @@
 import re
 import requests
 from atproto import Client as BSClient
-from g4f.client import Client as GPTClient
 from bs4 import BeautifulSoup
 import artifact_utils
 import bluesky_utils
@@ -54,14 +53,14 @@ def fetch_article_content(url):
     article_content = remove_newlines(article_content)
     return article_content[:6000]
 
-def generate_post_text(gpt_client, full_url, title, content, introduction):
+def generate_post_text(api_key, full_url, title, content, introduction):
     retries = 0
     max_retries = 3
     while retries < max_retries:
         limit_size = 300 - len(introduction) - len(title)
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
-            gpt_client,
+            api_key,
             f"この記事で何が伝えたいのか{limit_size}文字以下で3行にまとめて欲しい。"
             "\n回答は日本語で強調文字は使用せず簡素にする。"
             f"\n以下に記事の内容を記載する。\n\n{content}",
@@ -78,17 +77,16 @@ def generate_post_text(gpt_client, full_url, title, content, introduction):
     print("300文字以内の文字を生成できませんでした。")
     return None
 
-def post(user_handle, user_password, config):
+def post(user_handle, user_password, api_key, config):
     targets = get_articles(config)
 
-    gpt_client = GPTClient()
     bs_client = BSClient()
 
     for full_url, title in targets:
         print(f"\nURL: {full_url}\nTitle: {title}")
 
         content = fetch_article_content(full_url)
-        post_text = generate_post_text(gpt_client, full_url, title, content, config.get("introduction", ""))
+        post_text = generate_post_text(api_key, full_url, title, content, config.get("introduction", ""))
         if not post_text:
             continue
 

@@ -7,16 +7,16 @@ def print_usage_and_exit():
     sys.exit(1)
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         print_usage_and_exit()
 
-    user_handle, user_password, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+    user_handle, user_password, api_key, mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
     if mode not in ["nikkei", "kabutan", "minkabu"]:
         print_usage_and_exit()
-    
+
     if mode == "nikkei":
-        nikkei_utils.post(user_handle, user_password)
+        nikkei_utils.post(user_handle, user_password, api_key)
     elif mode == "kabutan":
         config_kabutan = {
             "url": "https://kabutan.jp/info/accessranking/2_1",
@@ -27,7 +27,7 @@ def main():
             "href_prefix": "",
             "introduction": "今日の経済ニュース"
         }
-        article_utils.post(user_handle, user_password, config_kabutan)
+        article_utils.post(user_handle, user_password, api_key, config_kabutan)
     elif mode == "minkabu":
         config_minkabu = {
             "url": "https://minkabu.jp/news/search?category=popular_recently",
@@ -38,7 +38,7 @@ def main():
             "href_prefix": "",
             "introduction": "今日の経済ニュース"
         }
-        article_utils.post(user_handle, user_password, config_minkabu)
+        article_utils.post(user_handle, user_password, api_key, config_minkabu)
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 atproto
 beautifulsoup4
-g4f
+google-generativeai
 Pillow
 pytz
 requests
