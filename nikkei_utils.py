@@ -53,7 +53,7 @@ def generate_post_text(api_key, full_url, introduction):
             f"これから与えるデータから分かることを具体的な価格やポイントを使用してまとめて欲しい。\n"
             "回答は強調文字は使用せず、更新時間の情報は不要である。\n"
             f"なるべく{created_day}日に更新された値を紹介し、{created_day}日に更新されていない項目は省略する。\n"
-            f"必ず{limit_size}文字以下にする。\n"
+            "必ず[limit_size]文字以下にする。\n"
             f"以下にデータを記載する。\n\n{content}",
             limit_size
         )

@@ -61,7 +61,7 @@ def generate_post_text(api_key, full_url, title, content, introduction):
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
             api_key,
-            f"この記事で何が伝えたいのか{limit_size}文字以下で3行にまとめて欲しい。"
+            "この記事で何が伝えたいのか[limit_size]文字以下で3行にまとめて欲しい。"
             "\n回答は日本語で強調文字は使用せず簡素にする。"
             f"\n以下に記事の内容を記載する。\n\n{content}",
             limit_size
