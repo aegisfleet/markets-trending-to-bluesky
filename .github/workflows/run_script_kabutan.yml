@@ -13,6 +13,14 @@ jobs:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
+      - name: 前回の成果物をダウンロード
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          name: artifact
+          path: tmp
+          if_no_artifact_found: ignore
+
       - name: Pythonの実行環境をセットアップ
         uses: actions/setup-python@v5
         with:
@@ -29,3 +37,10 @@ jobs:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py "${BLUESKY_HANDLE}" "${BLUESKY_PASSWORD}" "${GEMINI_API_KEY}" kabutan
+
+      - name: 成果物をアップロード
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact
+          path: tmp/
+          retention-days: 10
