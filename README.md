@@ -30,7 +30,7 @@ pip install -r requirements.txt
 アプリケーションを実行するには、以下のコマンドを使用します。
 
 ```text
-python main.py <BlueSkyのユーザーハンドル> <BlueSkyのパスワード> <GeminiのAPIキー>
+python main.py <BlueSkyのユーザーハンドル> <BlueSkyのパスワード> <GeminiのAPIキー> <モード>
 ```
 
 ### モードの種類

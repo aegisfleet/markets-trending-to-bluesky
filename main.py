@@ -3,7 +3,7 @@ import nikkei_utils
 import article_utils
 
 def print_usage_and_exit():
-    print("使用法: python main.py <ユーザーハンドル> <パスワード> <モード>")
+    print("使用法: python main.py <BlueSkyのユーザーハンドル> <BlueSkyのパスワード> <GeminiのAPIキー> <モード>")
     sys.exit(1)
 
 def main():
