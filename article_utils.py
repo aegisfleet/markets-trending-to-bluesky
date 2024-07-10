@@ -16,6 +16,10 @@ def get_articles(config):
 
     previous_articles = artifact_utils.load_previous_results()
     response = requests.get(url)
+    if response is None or response.text is None:
+        print("Failed to fetch the webpage")
+        return []
+    
     soup = BeautifulSoup(response.text, "html.parser")
     article_elements = soup.find_all(container_tag["name"], class_=container_tag["class_"])
 
@@ -46,10 +50,19 @@ def remove_newlines(text):
 
 def fetch_article_content(url):
     response = requests.get(url)
+    if response is None:
+        print(f"Failed to fetch the article content from {url}")
+        return ""
+    
     response.encoding = response.apparent_encoding
 
     soup = BeautifulSoup(response.text, 'html.parser')
-    article_content = soup.find('div', {'id': 'main'}).text.strip()
+    main_div = soup.find('div', {'id': 'main'})
+    if main_div is None:
+        print(f"Could not find main content div in {url}")
+        return ""
+    
+    article_content = main_div.text.strip()
     article_content = remove_newlines(article_content)
     return article_content[:6000]
 
