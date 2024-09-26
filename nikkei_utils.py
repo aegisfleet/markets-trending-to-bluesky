@@ -50,7 +50,7 @@ def generate_post_text(api_key, full_url, introduction):
         print(f"limit_size: {limit_size}")
         message = gpt_utils.get_description(
             api_key,
-            f"これから与えるデータから分かることを具体的な価格やポイントを使用してまとめて欲しい。\n"
+            f"これから与えるデータから分かることを具体的な価格やポイントを使用して3行にまとめて欲しい。\n"
             "回答は強調文字は使用せず、更新時間の情報は不要である。\n"
             f"なるべく{created_day}日に更新された値を紹介し、{created_day}日に更新されていない項目は省略する。\n"
             "必ず[limit_size]文字以下にする。\n"
