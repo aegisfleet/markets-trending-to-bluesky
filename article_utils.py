@@ -45,7 +45,7 @@ def get_articles(config):
     return articles
 
 def remove_newlines(text):
-    clean_text = re.sub('\n\s*\n', '\n', text)
+    clean_text = re.sub(r'\n\s*\n', '\n', text)
     return clean_text
 
 def fetch_article_content(url):
@@ -53,7 +53,7 @@ def fetch_article_content(url):
     if response is None:
         print(f"Failed to fetch the article content from {url}")
         return ""
-    
+
     response.encoding = response.apparent_encoding
 
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -61,7 +61,7 @@ def fetch_article_content(url):
     if main_div is None:
         print(f"Could not find main content div in {url}")
         return ""
-    
+
     article_content = main_div.text.strip()
     article_content = remove_newlines(article_content)
     return article_content[:6000]
