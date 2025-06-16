@@ -1,4 +1,5 @@
 name: スクリプトを実行する(日経)
+
 permissions:
   contents: read
 
