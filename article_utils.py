@@ -16,8 +16,8 @@ def get_articles(config):
 
     previous_articles = artifact_utils.load_previous_results()
     response = requests.get(url)
-    if response is None or response.text is None:
-        print("Failed to fetch the webpage")
+    if not response.ok:
+        print(f"Failed to fetch the webpage: {url} (status: {response.status_code})")
         return []
     
     soup = BeautifulSoup(response.text, "html.parser")
@@ -50,8 +50,8 @@ def remove_newlines(text):
 
 def fetch_article_content(url):
     response = requests.get(url)
-    if response is None:
-        print(f"Failed to fetch the article content from {url}")
+    if not response.ok:
+        print(f"Failed to fetch the article content from {url} (status: {response.status_code})")
         return ""
 
     response.encoding = response.apparent_encoding
