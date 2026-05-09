@@ -17,12 +17,15 @@ jobs:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v6
 
+      - name: 成果物用の一時ディレクトリを作成
+        run: mkdir -p "${{ runner.temp }}/artifacts/kabutan"
+
       - name: 前回の成果物をダウンロード
         uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           name: artifact
-          path: tmp
+          path: ${{ runner.temp }}/artifacts/kabutan
           if_no_artifact_found: ignore
 
       - name: Pythonの実行環境をセットアップ
@@ -46,5 +49,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: artifact
-          path: tmp/
+          path: ${{ runner.temp }}/artifacts/kabutan/
           retention-days: 10
