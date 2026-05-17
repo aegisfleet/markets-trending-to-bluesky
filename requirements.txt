@@ -5,3 +5,4 @@ packaging
 Pillow
 pytz
 requests
+dnspython

@@ -94,6 +94,7 @@ def post(user_handle, user_password, api_key, config):
     targets = get_articles(config)
 
     bs_client = BSClient()
+    auth_client = bluesky_utils.authenticate(bs_client, user_handle, user_password)
 
     for full_url, title in targets:
         print(f"\nURL: {full_url}\nTitle: {title}")
@@ -106,8 +107,7 @@ def post(user_handle, user_password, api_key, config):
         title, description, image_url = bluesky_utils.fetch_webpage_metadata(full_url)
         print(post_text.build_text(), image_url, sep="\n")
 
-        bluesky_utils.authenticate(bs_client, user_handle, user_password)
         embed_external = bluesky_utils.create_external_embed(
-            bs_client, title, description, full_url, image_url
+            auth_client, title, description, full_url, image_url
         )
-        bluesky_utils.post(bs_client, post_text, embed_external)
+        bluesky_utils.post(auth_client, post_text, embed_external)
