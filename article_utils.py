@@ -15,7 +15,7 @@ def get_articles(config):
     href_prefix = config.get("href_prefix", "")
 
     previous_articles = artifact_utils.load_previous_results()
-    response = requests.get(url)
+    response = bluesky_utils.http_get(url)
     if not response.ok:
         print(f"Failed to fetch the webpage: {url} (status: {response.status_code})")
         return []
@@ -49,7 +49,7 @@ def remove_newlines(text):
     return clean_text
 
 def fetch_article_content(url):
-    response = requests.get(url)
+    response = bluesky_utils.http_get(url)
     if not response.ok:
         print(f"Failed to fetch the article content from {url} (status: {response.status_code})")
         return ""

@@ -8,7 +8,7 @@ import bluesky_utils
 import gpt_utils
 
 def fetch_nikkei_index(url):
-    response = requests.get(url)
+    response = bluesky_utils.http_get(url)
     soup = BeautifulSoup(response.content, "html.parser")
 
     tables = soup.find_all("table", class_="cmn-table_style1")

@@ -6,3 +6,5 @@ Pillow
 pytz
 requests
 dnspython
+scrapingbee
+python-dotenv

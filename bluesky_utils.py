@@ -1,16 +1,44 @@
 import io
+import os
 import requests
 import time
 from atproto import models, client_utils
 from atproto_client.exceptions import UnauthorizedError, NetworkError
 from bs4 import BeautifulSoup, Tag
 from PIL import Image
+from dotenv import load_dotenv
+
+# .envファイルから環境変数をロード
+load_dotenv()
 
 HTML_PARSER = "html.parser"
 
+def http_get(url, timeout=60):
+    """
+    URLにアクセスしてレスポンスオブジェクトを返す。
+    minkabu.jp 等、特定のアクセス制限が厳しいドメインの場合は ScrapingBee を使用する。
+    """
+    if "minkabu.jp" in url:
+        api_key = os.environ.get("SCRAPINGBEE_API_KEY")
+        if api_key:
+            try:
+                from scrapingbee import ScrapingBeeClient
+                client = ScrapingBeeClient(api_key=api_key)
+                response = client.get(url)
+                return response
+            except Exception as e:
+                print(f"ScrapingBee failed: {e}. Falling back to requests...")
+        else:
+            print("Warning: SCRAPINGBEE_API_KEY is not set. Falling back to requests...")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    return requests.get(url, headers=headers, timeout=timeout)
+
 def fetch_webpage_metadata(url):
     try:
-        response = requests.get(url, timeout=60)
+        response = http_get(url, timeout=60)
         response.raise_for_status()
         response.encoding = response.apparent_encoding
     except Exception as error:
@@ -165,7 +193,7 @@ def compress_image(image_bytes, max_size_kb=500, quality=85):
 def _download_image(url, retries=3):
     for attempt in range(1, retries + 1):
         try:
-            img_response = requests.get(url, timeout=30)
+            img_response = http_get(url, timeout=30)
             img_response.raise_for_status()
             return img_response.content
         except requests.RequestException as e:
