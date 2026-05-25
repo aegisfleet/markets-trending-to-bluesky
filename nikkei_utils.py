@@ -7,34 +7,29 @@ from bs4 import BeautifulSoup
 import bluesky_utils
 import gpt_utils
 
-def fetch_nikkei_index(url):
+def fetch_market_indices(url="https://kabutan.jp/"):
     response = bluesky_utils.http_get(url)
     soup = BeautifulSoup(response.content, "html.parser")
 
-    tables = soup.find_all("table", class_="cmn-table_style1")
+    tables = soup.find_all("table", class_="sub_shihyou")
     if not tables:
         return None
 
-    all_index_data = []
+    index_data = []
 
     for table in tables:
         rows = table.find_all("tr")
-
-        index_data = []
-
         for row in rows:
-            header = row.find("th")
             columns = row.find_all("td")
-            if header and len(columns) >= 3:
-                index_name = header.text.strip()
-                value = columns[0].text.strip()
-                change = columns[1].text.strip()
-                update_time = columns[2].text.strip()
-                index_data.append(f"{index_name}: {value} ({change}), 更新時間: {update_time}")
+            if len(columns) >= 3:
+                index_name = columns[0].text.strip()
+                value = columns[1].text.strip()
+                change = columns[2].text.strip()
+                # 必要な主要指標のみを抽出する
+                if index_name in ["日経平均", "ＮＹダウ", "米ドル円", "ナスダック", "S&P500"]:
+                    index_data.append(f"{index_name}: {value} ({change})")
 
-        all_index_data.append("\n".join(index_data))
-
-    return "\n\n".join(all_index_data)
+    return "\n".join(index_data)
 
 def generate_post_text(api_key, full_url, introduction):
     jst = pytz.timezone('Asia/Tokyo')
@@ -42,7 +37,7 @@ def generate_post_text(api_key, full_url, introduction):
     created_at = now.strftime('%Y/%m/%d %H:%M')
     created_day = now.strftime('%d')
 
-    content = fetch_nikkei_index(full_url)
+    content = fetch_market_indices(full_url)
     retries = 0
     max_retries = 3
     while retries < max_retries:
@@ -71,7 +66,7 @@ def generate_post_text(api_key, full_url, introduction):
 def post(user_handle, user_password, api_key):
     bs_client = BSClient()
 
-    full_url = "https://www.nikkei.com/markets/worldidx/"
+    full_url = "https://kabutan.jp/"
     print(f"\nURL: {full_url}")
 
     post_text = generate_post_text(api_key, full_url, "今日の市場動向")
