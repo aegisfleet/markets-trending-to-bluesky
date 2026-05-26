@@ -1,4 +1,5 @@
 import datetime
+import re
 import pytz
 import requests
 import sys
@@ -7,27 +8,65 @@ from bs4 import BeautifulSoup
 import bluesky_utils
 import gpt_utils
 
-def fetch_market_indices(url="https://kabutan.jp/"):
-    response = bluesky_utils.http_get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
+BASE_URL = "https://www.nikkei.com/marketdata"
 
-    tables = soup.find_all("table", class_="sub_shihyou")
-    if not tables:
+# 取得対象指標 (indicator_code, 表示名)
+TARGET_INDICATORS = [
+    ("NK225", "日経平均"),
+    ("DJI", "NYダウ"),
+    ("USDJPY", "ドル円"),
+    ("IXIC", "NASDAQ"),
+    ("SPX", "S&P500"),
+]
+
+def _get_build_id():
+    """日経マーケットデータページのHTMLからNext.jsのビルドIDを取得する。"""
+    response = bluesky_utils.http_get(f"{BASE_URL}/global-overview/")
+    response.raise_for_status()
+    match = re.search(r'/_next/static/([^/]+)/_buildManifest', response.text)
+    if not match:
+        raise ValueError("ビルドIDの取得に失敗した")
+    return match.group(1)
+
+def _fetch_indicator(build_id, code):
+    """指定したindicator_codeの価格データをNext.js _next/dataエンドポイントから取得する。"""
+    url = f"{BASE_URL}/_next/data/{build_id}/quote/{code}.json"
+    response = bluesky_utils.http_get(url)
+    response.raise_for_status()
+    data = response.json()
+    return data.get("pageProps", {}).get("indicatorValue", {})
+
+def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overview/"):
+    """日経マーケットデータページから主要指標の価格データを取得する。
+
+    Next.js の _next/data エンドポイントを利用してリアルタイム価格を取得する。
+    返り値は各指標の「名称: 値 (変動幅), 更新時間: xx:xx」形式の文字列を改行で連結したもの。
+    データが取得できない場合は None を返す。
+    """
+    try:
+        build_id = _get_build_id()
+    except Exception as e:
+        print(f"ビルドIDの取得に失敗した: {e}")
         return None
 
     index_data = []
+    for code, display_name in TARGET_INDICATORS:
+        try:
+            iv = _fetch_indicator(build_id, code)
+            value = iv.get("value", "")
+            diff = iv.get("diff", "")
+            diff_percent = iv.get("diffPercent", "")
+            time_str = iv.get("time", "")
 
-    for table in tables:
-        rows = table.find_all("tr")
-        for row in rows:
-            columns = row.find_all("td")
-            if len(columns) >= 3:
-                index_name = columns[0].text.strip()
-                value = columns[1].text.strip()
-                change = columns[2].text.strip()
-                # 必要な主要指標のみを抽出する
-                if index_name in ["日経平均", "ＮＹダウ", "米ドル円", "ナスダック", "S&P500"]:
-                    index_data.append(f"{index_name}: {value} ({change})")
+            change_str = f"{diff} ({diff_percent}%)" if diff_percent else diff
+            index_data.append(
+                f"{display_name}: {value} ({change_str}), 更新時間: {time_str}"
+            )
+        except Exception as e:
+            print(f"{code} のデータ取得に失敗した: {e}")
+
+    if not index_data:
+        return None
 
     return "\n".join(index_data)
 
@@ -37,7 +76,7 @@ def generate_post_text(api_key, full_url, introduction):
     created_at = now.strftime('%Y/%m/%d %H:%M')
     created_day = now.strftime('%d')
 
-    content = fetch_market_indices(full_url)
+    content = fetch_nikkei_market_data(full_url)
     retries = 0
     max_retries = 3
     while retries < max_retries:
@@ -66,7 +105,7 @@ def generate_post_text(api_key, full_url, introduction):
 def post(user_handle, user_password, api_key):
     bs_client = BSClient()
 
-    full_url = "https://kabutan.jp/"
+    full_url = "https://www.nikkei.com/marketdata/global-overview/"
     print(f"\nURL: {full_url}")
 
     post_text = generate_post_text(api_key, full_url, "今日の市場動向")
