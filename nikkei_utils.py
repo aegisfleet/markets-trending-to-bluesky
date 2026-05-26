@@ -1,23 +1,13 @@
 import datetime
 import re
 import pytz
-import requests
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from atproto import Client as BSClient
-from bs4 import BeautifulSoup
 import bluesky_utils
 import gpt_utils
 
 BASE_URL = "https://www.nikkei.com/marketdata"
-
-# 取得対象指標 (indicator_code, 表示名)
-TARGET_INDICATORS = [
-    ("NK225", "日経平均"),
-    ("DJI", "NYダウ"),
-    ("USDJPY", "ドル円"),
-    ("IXIC", "NASDAQ"),
-    ("SPX", "S&P500"),
-]
 
 def _get_build_id():
     """日経マーケットデータページのHTMLからNext.jsのビルドIDを取得する。"""
@@ -28,20 +18,41 @@ def _get_build_id():
         raise ValueError("ビルドIDの取得に失敗した")
     return match.group(1)
 
-def _fetch_indicator(build_id, code):
-    """指定したindicator_codeの価格データをNext.js _next/dataエンドポイントから取得する。"""
-    url = f"{BASE_URL}/_next/data/{build_id}/quote/{code}.json"
+def _fetch_indicator_profiles(build_id):
+    """global-overview.json から全指標プロフィール一覧を取得する。"""
+    url = f"{BASE_URL}/_next/data/{build_id}/global-overview.json"
     response = bluesky_utils.http_get(url)
     response.raise_for_status()
-    data = response.json()
-    return data.get("pageProps", {}).get("indicatorValue", {})
+    return response.json().get("pageProps", {}).get("indicatorProfileList", [])
+
+def _fetch_quote(build_id, code, group_name, service_name):
+    """指定コードの価格データを取得する。失敗時は None を返す。"""
+    url = f"{BASE_URL}/_next/data/{build_id}/quote/{code}.json"
+    try:
+        response = bluesky_utils.http_get(url)
+        response.raise_for_status()
+        props = response.json().get("pageProps", {})
+        iv = props.get("indicatorValue", {})
+        if not iv.get("value"):
+            return None
+        return {
+            "code": code,
+            "group_name": group_name,
+            "service_name": service_name,
+            "value": iv.get("value", ""),
+            "diff": iv.get("diff", ""),
+            "diff_percent": iv.get("diffPercent", ""),
+            "time": iv.get("time", ""),
+        }
+    except Exception as e:
+        print(f"{code} の取得に失敗した: {e}")
+        return None
 
 def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overview/"):
-    """日経マーケットデータページから主要指標の価格データを取得する。
+    """日経マーケットデータページから全指標の価格データを取得する。
 
-    Next.js の _next/data エンドポイントを利用してリアルタイム価格を取得する。
-    返り値は各指標の「名称: 値 (変動幅), 更新時間: xx:xx」形式の文字列を改行で連結したもの。
-    データが取得できない場合は None を返す。
+    global-overview.json から指標一覧を動的取得し、各指標の quote を並列フェッチする。
+    カテゴリごとにグループ化した文字列を返す。取得失敗時は None を返す。
     """
     try:
         build_id = _get_build_id()
@@ -49,26 +60,64 @@ def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overv
         print(f"ビルドIDの取得に失敗した: {e}")
         return None
 
-    index_data = []
-    for code, display_name in TARGET_INDICATORS:
-        try:
-            iv = _fetch_indicator(build_id, code)
-            value = iv.get("value", "")
-            diff = iv.get("diff", "")
-            diff_percent = iv.get("diffPercent", "")
-            time_str = iv.get("time", "")
-
-            change_str = f"{diff} ({diff_percent}%)" if diff_percent else diff
-            index_data.append(
-                f"{display_name}: {value} ({change_str}), 更新時間: {time_str}"
-            )
-        except Exception as e:
-            print(f"{code} のデータ取得に失敗した: {e}")
-
-    if not index_data:
+    try:
+        profiles = _fetch_indicator_profiles(build_id)
+    except Exception as e:
+        print(f"指標一覧の取得に失敗した: {e}")
         return None
 
-    return "\n".join(index_data)
+    print(f"指標プロフィール取得完了: {len(profiles)} 件")
+
+    # 並列で全指標の価格データを取得
+    results = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {
+            executor.submit(
+                _fetch_quote,
+                build_id,
+                p["indicator_code"],
+                p["group_name"],
+                p["service_name"],
+            ): p["indicator_code"]
+            for p in profiles
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                results.append(result)
+
+    if not results:
+        return None
+
+    # group_name の登場順を profiles から取得してソート
+    group_order = {}
+    code_order = {}
+    for i, p in enumerate(profiles):
+        gname = p["group_name"]
+        if gname not in group_order:
+            group_order[gname] = len(group_order)
+        code_order[p["indicator_code"]] = i
+
+    results.sort(key=lambda x: (
+        group_order.get(x["group_name"], 999),
+        code_order.get(x["code"], 999),
+    ))
+
+    # カテゴリごとに整形
+    lines = []
+    current_group = None
+    for r in results:
+        if r["group_name"] != current_group:
+            current_group = r["group_name"]
+            lines.append(f"\n【{current_group}】")
+        change_str = ""
+        if r["diff"]:
+            pct = f" ({r['diff_percent']}%)" if r["diff_percent"] else ""
+            change_str = f" ({r['diff']}{pct})"
+        time_str = f", 更新時間: {r['time']}" if r["time"] else ""
+        lines.append(f"{r['service_name']}: {r['value']}{change_str}{time_str}")
+
+    return "\n".join(lines).strip()
 
 def generate_post_text(api_key, full_url, introduction):
     jst = pytz.timezone('Asia/Tokyo')
