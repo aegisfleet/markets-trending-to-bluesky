@@ -1,0 +1,21 @@
+[project]
+name = "markets-trending-to-bluesky"
+version = "0.1.0"
+description = "A bot to fetch market indicators, summarize trends, and post them to Bluesky"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "atproto",
+    "beautifulsoup4",
+    "dnspython",
+    "google-genai",
+    "packaging",
+    "Pillow",
+    "pytz",
+    "requests",
+    "scrapingbee",
+    "python-dotenv",
+]
+
+[tool.uv]
+exclude-newer = "7 days"
