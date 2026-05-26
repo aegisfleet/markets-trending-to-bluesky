@@ -48,27 +48,8 @@ def _fetch_quote(build_id, code, group_name, service_name):
         print(f"{code} の取得に失敗した: {e}")
         return None
 
-def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overview/"):
-    """日経マーケットデータページから全指標の価格データを取得する。
-
-    global-overview.json から指標一覧を動的取得し、各指標の quote を並列フェッチする。
-    カテゴリごとにグループ化した文字列を返す。取得失敗時は None を返す。
-    """
-    try:
-        build_id = _get_build_id()
-    except Exception as e:
-        print(f"ビルドIDの取得に失敗した: {e}")
-        return None
-
-    try:
-        profiles = _fetch_indicator_profiles(build_id)
-    except Exception as e:
-        print(f"指標一覧の取得に失敗した: {e}")
-        return None
-
-    print(f"指標プロフィール取得完了: {len(profiles)} 件")
-
-    # 並列で全指標の価格データを取得
+def _fetch_all_quotes(build_id, profiles):
+    """並列で全指標の価格データを取得する。"""
     results = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = {
@@ -85,11 +66,11 @@ def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overv
             result = future.result()
             if result:
                 results.append(result)
+    return results
 
-    if not results:
-        return None
 
-    # group_name の登場順を profiles から取得してソート
+def _sort_quotes(results, profiles):
+    """profiles の並び順（group_name, indicator_code）に基づいて results をソートする。"""
     group_order = {}
     code_order = {}
     for i, p in enumerate(profiles):
@@ -103,7 +84,9 @@ def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overv
         code_order.get(x["code"], 999),
     ))
 
-    # カテゴリごとに整形
+
+def _format_market_data(results):
+    """取得した価格データをカテゴリごとに整形してテキストにする。"""
     lines = []
     current_group = None
     for r in results:
@@ -119,13 +102,41 @@ def fetch_nikkei_market_data(url="https://www.nikkei.com/marketdata/global-overv
 
     return "\n".join(lines).strip()
 
-def generate_post_text(api_key, full_url, introduction):
+
+def fetch_nikkei_market_data():
+    """日経マーケットデータページから全指標の価格データを取得する。
+
+    global-overview.json から指標一覧を動的取得し、各指標 of quote を並列フェッチする。
+    カテゴリごとにグループ化した文字列を返す。取得失敗時は None を返す。
+    """
+    try:
+        build_id = _get_build_id()
+    except Exception as e:
+        print(f"ビルドIDの取得に失敗した: {e}")
+        return None
+
+    try:
+        profiles = _fetch_indicator_profiles(build_id)
+    except Exception as e:
+        print(f"指標一覧の取得に失敗した: {e}")
+        return None
+
+    print(f"指標プロフィール取得完了: {len(profiles)} 件")
+
+    results = _fetch_all_quotes(build_id, profiles)
+    if not results:
+        return None
+
+    _sort_quotes(results, profiles)
+    return _format_market_data(results)
+
+def generate_post_text(api_key, introduction):
     jst = pytz.timezone('Asia/Tokyo')
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
     created_day = now.strftime('%d')
 
-    content = fetch_nikkei_market_data(full_url)
+    content = fetch_nikkei_market_data()
     retries = 0
     max_retries = 3
     while retries < max_retries:
@@ -157,7 +168,7 @@ def post(user_handle, user_password, api_key):
     full_url = "https://www.nikkei.com/marketdata/global-overview/"
     print(f"\nURL: {full_url}")
 
-    post_text = generate_post_text(api_key, full_url, "今日の市場動向")
+    post_text = generate_post_text(api_key, "今日の市場動向")
     if not post_text:
         sys.exit(1)
 
