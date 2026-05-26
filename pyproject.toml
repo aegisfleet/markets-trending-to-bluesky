@@ -13,7 +13,6 @@ dependencies = [
     "Pillow",
     "pytz",
     "requests",
-    "scrapingbee",
     "python-dotenv",
 ]
 

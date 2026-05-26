@@ -547,7 +547,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pytz" },
     { name = "requests" },
-    { name = "scrapingbee" },
 ]
 
 [package.metadata]
@@ -561,7 +560,6 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "pytz" },
     { name = "requests" },
-    { name = "scrapingbee" },
 ]
 
 [[package]]
@@ -863,18 +861,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
-]
-
-[[package]]
-name = "scrapingbee"
-version = "2.0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/76/65afa7e4f025082a10d614e7a45d60c05025e160f3d28740221a68af8255/scrapingbee-2.0.2.tar.gz", hash = "sha256:312a2f2beab03eb687e568c3688533c44e543104eea82f18a4183f9ce1042e0f", size = 6149, upload-time = "2025-10-02T10:09:43.682Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/a0/ce8c66d302517432c76a4edb52599f8827cb3c3a38e7332fe4db2aaca3a9/scrapingbee-2.0.2-py3-none-any.whl", hash = "sha256:28d1c9b250917e45924d8a21cf7d55776c701d6d1c5283aabf3ef1911462a291", size = 5248, upload-time = "2025-10-02T10:09:42.374Z" },
 ]
 
 [[package]]
