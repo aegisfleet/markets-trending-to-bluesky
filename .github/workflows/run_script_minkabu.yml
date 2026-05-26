@@ -48,7 +48,6 @@ jobs:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SCRAPINGBEE_API_KEY: ${{ secrets.SCRAPINGBEE_API_KEY }}
         run: uv run python main.py "${BLUESKY_HANDLE}" "${BLUESKY_PASSWORD}" "${GEMINI_API_KEY}" minkabu
 
       - name: 成果物をアップロード
