@@ -79,6 +79,10 @@ def generate_post_text(api_key, full_url, title, content, introduction):
             f"\n以下に記事の内容を記載する。\n\n{content}",
             limit_size
         )
+        if not message:
+            print("要約文の生成に失敗しました。")
+            return None
+
         post_text = bluesky_utils.format_message_with_link(
             title, full_url, introduction, message
         )

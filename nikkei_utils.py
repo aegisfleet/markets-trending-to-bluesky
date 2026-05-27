@@ -151,6 +151,10 @@ def generate_post_text(api_key, introduction):
             f"以下にデータを記載する。\n\n{content}",
             limit_size
         )
+        if not message:
+            print("要約文の生成に失敗しました。")
+            return None
+
         post_text = bluesky_utils.format_message(
             f"{created_at}時点", introduction, message
         )

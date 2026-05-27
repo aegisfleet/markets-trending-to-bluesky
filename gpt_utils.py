@@ -53,6 +53,8 @@ def get_description(api_key, text, limit_size, max_retries=5):
             return attempt_request(retry_count + 1)
         else:
             print("最大リトライ回数に達しました。")
+            if not response_text or response_text.strip() == "":
+                return None
             return remove_last_sentence(response_text)
 
     return attempt_request(0)
