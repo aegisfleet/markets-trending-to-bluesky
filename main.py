@@ -12,22 +12,11 @@ def main():
 
     user_handle, user_password, api_key, mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
-    if mode not in ["nikkei", "kabutan", "minkabu"]:
+    if mode not in ["nikkei", "minkabu"]:
         print_usage_and_exit()
 
     if mode == "nikkei":
         nikkei_utils.post(user_handle, user_password, api_key)
-    elif mode == "kabutan":
-        config_kabutan = {
-            "url": "https://kabutan.jp/info/accessranking/2_1",
-            "count": 5,
-            "base_url": "https://kabutan.jp",
-            "container_tag": {"name": "td", "class_": "acrank_title"},
-            "title_box_tag": {"name": "", "class_": ""},
-            "href_prefix": "",
-            "introduction": "今日の経済ニュース"
-        }
-        article_utils.post(user_handle, user_password, api_key, config_kabutan)
     elif mode == "minkabu":
         config_minkabu = {
             "url": "https://minkabu.jp/news/search?category=popular_recently",
