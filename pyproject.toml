@@ -5,7 +5,7 @@ description = "A bot to fetch market indicators, summarize trends, and post them
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "atproto>=0.0.65",
+    "atproto>=0.0.69",
     "beautifulsoup4",
     "dnspython",
     "google-genai",
