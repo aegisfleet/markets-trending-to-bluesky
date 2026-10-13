@@ -25,33 +25,48 @@ def _fetch_indicator_profiles(build_id):
     response.raise_for_status()
     return response.json().get("pageProps", {}).get("indicatorProfileList", [])
 
-def _fetch_quote(build_id, code, group_name, service_name):
+def _fetch_quote(build_id, code, group_name, service_name, max_retries=2):
     """指定コードの価格データを取得する。失敗時は None を返す。"""
     url = f"{BASE_URL}/_next/data/{build_id}/quote/{code}.json"
-    try:
-        response = bluesky_utils.http_get(url)
-        response.raise_for_status()
-        props = response.json().get("pageProps", {})
-        iv = props.get("indicatorValue", {})
-        if not iv.get("value"):
-            return None
-        return {
-            "code": code,
-            "group_name": group_name,
-            "service_name": service_name,
-            "value": iv.get("value", ""),
-            "diff": iv.get("diff", ""),
-            "diff_percent": iv.get("diffPercent", ""),
-            "time": iv.get("time", ""),
-        }
-    except Exception as e:
-        print(f"{code} の取得に失敗した: {e}")
-        return None
+    import time
+    for attempt in range(max_retries):
+        try:
+            response = bluesky_utils.http_get(url)
+            response.raise_for_status()
+            # HTMLが返ってきた場合はレートリミット/CAPTCHAの可能性がある
+            text = response.text.strip()
+            if text.startswith("<!DOCTYPE html") or text.startswith("<html"):
+                if attempt < max_retries - 1:
+                    time.sleep(1.0)
+                    continue
+                print(f"{code} の取得でHTMLレスポンス(CAPTCHA等の可能性)を検出した")
+                return None
+
+            props = response.json().get("pageProps", {})
+            iv = props.get("indicatorValue", {})
+            if not iv.get("value"):
+                return None
+            return {
+                "code": code,
+                "group_name": group_name,
+                "service_name": service_name,
+                "value": iv.get("value", ""),
+                "diff": iv.get("diff", ""),
+                "diff_percent": iv.get("diffPercent", ""),
+                "time": iv.get("time", ""),
+            }
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(0.5)
+            else:
+                print(f"{code} の取得に失敗した: {e}")
+                return None
 
 def _fetch_all_quotes(build_id, profiles):
     """並列で全指標の価格データを取得する。"""
     results = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    # 過度な同時リクエストによるCDN/WAFのBot遮断を防ぐため並列度を4に設定
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(
                 _fetch_quote,
