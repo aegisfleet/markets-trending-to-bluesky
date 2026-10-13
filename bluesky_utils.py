@@ -49,6 +49,79 @@ def parse_html_for_metadata(html_content):
 
     return title_text, description_content, image_url
 
+def _resolve_did_dns(handle):
+    """DNS TXTレコード(_atproto.{handle})からDIDを解決する"""
+    if handle.endswith(".bsky.social"):
+        return None
+    try:
+        import dns.resolver
+        answers = dns.resolver.resolve(f"_atproto.{handle}", "TXT")
+        for rdata in answers:
+            txt_value = rdata.strings[0].decode("utf-8")
+            if txt_value.startswith("did="):
+                return txt_value[4:]
+    except Exception:
+        pass
+    return None
+
+def _resolve_did_api(handle):
+    """公式公開XRPC API (resolveHandle) からDIDを解決する"""
+    try:
+        url = f"https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={handle}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            return resp.json().get("did")
+    except Exception:
+        pass
+    return None
+
+def _resolve_did_well_known(handle):
+    """HTTPS well-knownからDIDを解決する"""
+    try:
+        url = f"https://{handle}/.well-known/atproto-did"
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.text.strip()
+    except Exception:
+        return None
+
+def _resolve_did(handle):
+    """ハンドルからDIDを解決する（DNS -> 公開API -> well-known）"""
+    return (
+        _resolve_did_dns(handle)
+        or _resolve_did_api(handle)
+        or _resolve_did_well_known(handle)
+    )
+
+def _fetch_did_doc(did):
+    """DIDドキュメント (plc.directory または did:web) を取得する"""
+    try:
+        if did.startswith("did:plc:"):
+            url = f"https://plc.directory/{did}"
+        elif did.startswith("did:web:"):
+            domain = did.split("did:web:")[1].replace(":", "/")
+            url = f"https://{domain}/.well-known/did.json"
+        else:
+            return None
+
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print(f"DIDドキュメント取得中にエラー: {e}")
+        return None
+
+def _fetch_pds_endpoint_from_did(did):
+    """DIDドキュメントからPDSエンドポイントURLを抽出する"""
+    doc = _fetch_did_doc(did)
+    if not doc:
+        return None
+
+    for svc in doc.get("service", []):
+        if svc.get("type") == "AtprotoPersonalDataServer":
+            return svc.get("serviceEndpoint")
+    return None
+
 def _resolve_pds_endpoint(handle):
     """ハンドルからPDSエンドポイントを解決する。
 
@@ -57,70 +130,10 @@ def _resolve_pds_endpoint(handle):
     3. フォールバックとして HTTPS 経由で well-known からDIDを取得
     4. DIDドキュメント (plc.directory または did:web) からPDSエンドポイントを抽出
     """
-    did = None
-
-    # 1. ハンドルが .bsky.social で終わらない場合はDNS TXTレコードを試行
-    if not handle.endswith(".bsky.social"):
-        try:
-            import dns.resolver
-            txt_name = f"_atproto.{handle}"
-            answers = dns.resolver.resolve(txt_name, "TXT")
-            for rdata in answers:
-                txt_value = rdata.strings[0].decode("utf-8")
-                if txt_value.startswith("did="):
-                    did = txt_value[4:]
-                    break
-        except Exception:
-            pass
-
-    # 2. 公開 XRPC API で解決を試行 (AT Protocol 標準の確実な解決方法)
-    if not did:
-        try:
-            resolve_url = f"https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={handle}"
-            resp = requests.get(resolve_url, timeout=10)
-            if resp.status_code == 200:
-                did = resp.json().get("did")
-        except Exception:
-            pass
-
-    # 3. フォールバック: HTTPS経由でwell-knownからDIDを解決
-    if not did:
-        try:
-            well_known_url = f"https://{handle}/.well-known/atproto-did"
-            resp = requests.get(well_known_url, timeout=10)
-            resp.raise_for_status()
-            did = resp.text.strip()
-        except Exception:
-            return None
-
+    did = _resolve_did(handle)
     if not did:
         return None
-
-    # 4. DIDドキュメントからPDSエンドポイントを取得
-    try:
-        if did.startswith("did:plc:"):
-            plc_url = f"https://plc.directory/{did}"
-            resp = requests.get(plc_url, timeout=10)
-            resp.raise_for_status()
-            did_doc = resp.json()
-        elif did.startswith("did:web:"):
-            domain = did.split("did:web:")[1].replace(":", "/")
-            doc_url = f"https://{domain}/.well-known/did.json"
-            resp = requests.get(doc_url, timeout=10)
-            resp.raise_for_status()
-            did_doc = resp.json()
-        else:
-            return None
-
-        services = did_doc.get("service", [])
-        for svc in services:
-            if svc.get("type") == "AtprotoPersonalDataServer":
-                return svc.get("serviceEndpoint")
-    except Exception as e:
-        print(f"PDSエンドポイントの抽出中にエラー: {e}")
-        return None
-
-    return None
+    return _fetch_pds_endpoint_from_did(did)
 
 def _try_login(client, username, password, retries=5, wait_time=5, label=""):
     """指定クライアントでログインを試行し、成功時にクライアントを返す。失敗時はNone。"""
