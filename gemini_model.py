@@ -5,7 +5,6 @@ import time
 from google import genai
 from google.genai import types
 
-
 def get_generation_config():
     """AFC警告を抑制するためのGenerationConfigを返す"""
     return types.GenerateContentConfig(
@@ -13,7 +12,6 @@ def get_generation_config():
             disable=True
         )
     )
-
 
 def extract_answer_text(response):
     """レスポンスから thinking パートを除外し、最終回答テキストのみを返す"""
@@ -26,7 +24,6 @@ def extract_answer_text(response):
             answer_texts.append(part.text)
     return "".join(answer_texts)
 
-
 def _is_retryable_error(e: Exception) -> tuple[bool, bool]:
     """一時的エラーを判定し、(is_rate_limit, is_server_error) を返す"""
     msg = str(e)
@@ -36,7 +33,6 @@ def _is_retryable_error(e: Exception) -> tuple[bool, bool]:
         k in msg for k in ("500", "INTERNAL", "503", "UNAVAILABLE")
     )
     return is_rate_limit, is_server_error
-
 
 def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
     """
@@ -90,4 +86,3 @@ def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
             delay = initial_delay * (backoff_factor ** attempt)
             print(f"Gemini API 一時エラー ({e})。{delay:.1f} 秒後に再試行する (試行 {attempt + 1}/{max_retries}, モデル: {current_model})...")
             time.sleep(delay)
-
