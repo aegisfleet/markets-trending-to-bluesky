@@ -35,7 +35,7 @@ def _fetch_quote(build_id, code, group_name, service_name, max_retries=2):
             response.raise_for_status()
             # HTMLが返ってきた場合はレートリミット/CAPTCHAの可能性がある
             text = response.text.strip()
-            if text.startswith("<!DOCTYPE html") or text.startswith("<html"):
+            if text.startswith(("<!DOCTYPE html", "<html")):
                 if attempt < max_retries - 1:
                     time.sleep(1.0)
                     continue
