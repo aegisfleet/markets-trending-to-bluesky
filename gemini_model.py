@@ -27,6 +27,17 @@ def extract_answer_text(response):
     return "".join(answer_texts)
 
 
+def _is_retryable_error(e: Exception) -> tuple[bool, bool]:
+    """一時的エラーを判定し、(is_rate_limit, is_server_error) を返す"""
+    msg = str(e)
+    code = getattr(e, "code", None)
+    is_rate_limit = (code in (429, 8)) or ("429" in msg) or ("RESOURCE_EXHAUSTED" in msg)
+    is_server_error = (code in (500, 503, 13, 14)) or any(
+        k in msg for k in ("500", "INTERNAL", "503", "UNAVAILABLE")
+    )
+    return is_rate_limit, is_server_error
+
+
 def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
     """
     Generates text using the Gemini API with exponential backoff retry for rate limits
@@ -62,32 +73,21 @@ def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
             )
             return extract_answer_text(response)
         except Exception as e:
-            error_msg = str(e)
-            is_rate_limit = "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg
-            is_server_error = (
-                "500" in error_msg or "INTERNAL" in error_msg or
-                "503" in error_msg or "UNAVAILABLE" in error_msg
-            )
-
-            # Check code attribute if it exists
-            code = getattr(e, "code", None)
-            if code == 429 or code == 8:
-                is_rate_limit = True
-            elif code in (500, 503, 13, 14):
-                is_server_error = True
+            is_rate_limit, is_server_error = _is_retryable_error(e)
 
             # サーバーエラー（500/503等）でフォールバックモデルが残っている場合は切り替え
             if is_server_error and (current_model_idx + 1) < len(models_to_try):
                 current_model_idx += 1
                 next_model = models_to_try[current_model_idx]
-                print(f"Gemini API サーバーエラー ({error_msg}) を検出。フォールバックモデル '{next_model}' に切り替えて再試行する...")
+                print(f"Gemini API サーバーエラー ({e}) を検出。フォールバックモデル '{next_model}' に切り替えて再試行する...")
                 time.sleep(initial_delay)
                 continue
 
-            if (is_rate_limit or is_server_error) and attempt < max_retries - 1:
-                delay = initial_delay * (backoff_factor ** attempt)
-                print(f"Gemini API 一時エラー ({error_msg})。{delay:.1f} 秒後に再試行する (試行 {attempt + 1}/{max_retries}, モデル: {current_model})...")
-                time.sleep(delay)
-            else:
+            can_retry = (is_rate_limit or is_server_error) and (attempt < max_retries - 1)
+            if not can_retry:
                 raise e
+
+            delay = initial_delay * (backoff_factor ** attempt)
+            print(f"Gemini API 一時エラー ({e})。{delay:.1f} 秒後に再試行する (試行 {attempt + 1}/{max_retries}, モデル: {current_model})...")
+            time.sleep(delay)
 
