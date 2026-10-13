@@ -31,7 +31,9 @@ def parse_html_for_metadata(html_content):
     soup = BeautifulSoup(html_content, HTML_PARSER)
 
     title = soup.find("title")
-    title_text = title.get_text() if title else ""
+    title_text = ""
+    if title and isinstance(title, Tag):
+        title_text = title.get_text()
 
     description = soup.find("meta", attrs={"name": "description"}) or \
                   soup.find("meta", attrs={"property": "og:description"})
@@ -40,8 +42,10 @@ def parse_html_for_metadata(html_content):
     description_content = description["content"] if description and isinstance(description, Tag) else ""
     image_url = image["content"] if image and isinstance(image, Tag) else ""
 
-    title_text = BeautifulSoup(title_text, HTML_PARSER).get_text()
-    description_content = BeautifulSoup(description_content if isinstance(description_content, str) else "", HTML_PARSER).get_text()
+    if title_text:
+        title_text = BeautifulSoup(title_text, HTML_PARSER).get_text()
+    if description_content:
+        description_content = BeautifulSoup(description_content if isinstance(description_content, str) else "", HTML_PARSER).get_text()
 
     return title_text, description_content, image_url
 
