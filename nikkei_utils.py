@@ -1,7 +1,7 @@
 import datetime
 import re
-import pytz
 import sys
+from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from atproto import Client as BSClient
 import bluesky_utils
@@ -146,7 +146,10 @@ def fetch_nikkei_market_data():
     return _format_market_data(results)
 
 def generate_post_text(api_key, introduction):
-    jst = pytz.timezone('Asia/Tokyo')
+    try:
+        jst = ZoneInfo('Asia/Tokyo')
+    except Exception:
+        jst = datetime.timezone(datetime.timedelta(hours=9))
     now = datetime.datetime.now(jst)
     created_at = now.strftime('%Y/%m/%d %H:%M')
     created_day = now.strftime('%d')
