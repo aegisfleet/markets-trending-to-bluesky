@@ -21,7 +21,6 @@ def _get_model_candidates():
             models.append(m)
     return models
 
-
 def _request_content(client, model, prompt, limit_size, config):
     """Gemini API にコンテンツ生成を要求し、文字数と空文字の検証を行う"""
     response = client.models.generate_content(
@@ -38,7 +37,6 @@ def _request_content(client, model, prompt, limit_size, config):
         )
     return text
 
-
 def _handle_api_error(e, retry_count, max_retries, current_model_idx, total_models):
     """APIエラー時のモデルフォールバックまたは待機処理を行い、(new_model_idx, should_switch) を返す"""
     _, is_server_error = gemini_model._is_retryable_error(e)
@@ -51,7 +49,6 @@ def _handle_api_error(e, retry_count, max_retries, current_model_idx, total_mode
         print(f"{wait_time}秒待機中...")
         time.sleep(wait_time)
     return current_model_idx, False
-
 
 def get_description(api_key, text, limit_size, max_retries=5):
     client = genai.Client(api_key=api_key)
@@ -86,5 +83,3 @@ def get_description(api_key, text, limit_size, max_retries=5):
     if not last_response_text:
         return None
     return remove_last_sentence(last_response_text)
-
-
