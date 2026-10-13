@@ -1,5 +1,5 @@
 MODEL_NAME = 'gemma-4-31b-it'
-FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.8-flash-lite']
+FALLBACK_MODELS = ['gemma-4-26b-a4b-it', 'gemini-3.8-flash']
 
 import time
 from google import genai
