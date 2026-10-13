@@ -16,7 +16,7 @@ def remove_last_sentence(text):
 def _get_model_candidates():
     """試行するモデル候補のリストを返す"""
     models = [gemini_model.MODEL_NAME]
-    for m in getattr(gemini_model, "FALLBACK_MODELS", ["gemini-2.5-flash"]):
+    for m in getattr(gemini_model, "FALLBACK_MODELS", ["gemini-3.8-flash"]):
         if m not in models:
             models.append(m)
     return models
@@ -39,8 +39,8 @@ def _request_content(client, model, prompt, limit_size, config):
 
 def _handle_api_error(e, retry_count, max_retries, current_model_idx, total_models):
     """APIエラー時のモデルフォールバックまたは待機処理を行い、(new_model_idx, should_switch) を返す"""
-    _, is_server_error = gemini_model._is_retryable_error(e)
-    if is_server_error and (current_model_idx + 1) < total_models:
+    _, _, should_switch = gemini_model._is_retryable_error(e)
+    if should_switch and (current_model_idx + 1) < total_models:
         time.sleep(2)
         return current_model_idx + 1, True
 

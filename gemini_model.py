@@ -1,5 +1,5 @@
 MODEL_NAME = 'gemma-4-31b-it'
-FALLBACK_MODELS = ['gemini-2.5-flash']
+FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.8-flash-lite']
 
 import time
 from google import genai
@@ -24,15 +24,19 @@ def extract_answer_text(response):
             answer_texts.append(part.text)
     return "".join(answer_texts)
 
-def _is_retryable_error(e: Exception) -> tuple[bool, bool]:
-    """一時的エラーを判定し、(is_rate_limit, is_server_error) を返す"""
+def _is_retryable_error(e: Exception) -> tuple[bool, bool, bool]:
+    """エラー種別を判定し、(is_rate_limit, is_server_error, should_switch) を返す"""
     msg = str(e)
     code = getattr(e, "code", None)
     is_rate_limit = (code in (429, 8)) or ("429" in msg) or ("RESOURCE_EXHAUSTED" in msg)
     is_server_error = (code in (500, 503, 13, 14)) or any(
         k in msg for k in ("500", "INTERNAL", "503", "UNAVAILABLE")
     )
-    return is_rate_limit, is_server_error
+    is_model_unavailable = (code in (404, 5)) or any(
+        k in msg for k in ("404", "NOT_FOUND", "no longer available")
+    )
+    should_switch = is_server_error or is_model_unavailable
+    return is_rate_limit, is_server_error, should_switch
 
 def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
     """
@@ -69,13 +73,13 @@ def generate_text_with_gemini(api_key: str, prompt_text: str) -> str:
             )
             return extract_answer_text(response)
         except Exception as e:
-            is_rate_limit, is_server_error = _is_retryable_error(e)
+            is_rate_limit, is_server_error, should_switch = _is_retryable_error(e)
 
-            # サーバーエラー（500/503等）でフォールバックモデルが残っている場合は切り替え
-            if is_server_error and (current_model_idx + 1) < len(models_to_try):
+            # サーバーエラーやモデル非対応/廃止（404等）でフォールバックモデルが残っている場合は切り替え
+            if should_switch and (current_model_idx + 1) < len(models_to_try):
                 current_model_idx += 1
                 next_model = models_to_try[current_model_idx]
-                print(f"Gemini API サーバーエラー ({e}) を検出。フォールバックモデル '{next_model}' に切り替えて再試行する...")
+                print(f"Gemini API エラー ({e}) を検出。フォールバックモデル '{next_model}' に切り替えて再試行する...")
                 time.sleep(initial_delay)
                 continue
 

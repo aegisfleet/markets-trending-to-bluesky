@@ -65,18 +65,20 @@ def _fetch_quote(build_id, code, group_name, service_name, max_retries=2):
 def _fetch_all_quotes(build_id, profiles):
     """並列で全指標の価格データを取得する。"""
     results = []
-    # 過度な同時リクエストによるCDN/WAFのBot遮断を防ぐため並列度を4に設定
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {
-            executor.submit(
+    import time
+    # 過度な同時リクエストによるCDN/WAFのBot遮断を防ぐため並列度を2に設定し投入間隔を設ける
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {}
+        for p in profiles:
+            futures[executor.submit(
                 _fetch_quote,
                 build_id,
                 p["indicator_code"],
                 p["group_name"],
                 p["service_name"],
-            ): p["indicator_code"]
-            for p in profiles
-        }
+            )] = p["indicator_code"]
+            time.sleep(0.05)
+
         for future in as_completed(futures):
             result = future.result()
             if result:
